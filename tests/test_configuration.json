@@ -1,0 +1,30 @@
+{
+  "hosts": [
+    {
+      "hostname": "54.174.79.219"
+    }
+  ],
+  "packages": [
+    {
+      "package_name": "apache2",
+      "deploy_mode": "install"
+    },
+    {
+      "package_name": "php libapache2-mod-php",
+      "deploy_mode": "install"
+    }
+  ],
+  "files": [
+    {
+      "filename": "index.php",
+      "owner": "www-data",
+      "group": "www-data",
+      "mode": "700"
+    }
+  ],
+  "restarts": [
+      {
+        "service_name": "apache2"
+      }
+    ]
+}

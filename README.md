@@ -18,22 +18,22 @@ Two Python classes handle the workflow:
 
 Script manages deployments in a single thread. For a larger number of hosts class Control can be easily extended into multi-threaded architecture to manage a massive number of hosts in parallel, asynchronously.
 
+# Notes
+- For security reasons, it is a good practice not to use root access. Instead, another user should be used, with sudo privileges granted. However, for the sake of simplicity, the root user is still used.
+- For security reasons, it is a good practice not to store passwords in the code. Therefore, the program will prompt the user for the password.
+- For security reasons, files are only allowed to be installed in one remote folder, which is the web root directory: ALLOWED_DIR=/var/www/html/
+- For security reasons, root password is redacted from log, password replaced with the keyword <censored> :)
+- For the sake of simplicity, the creation of remote directories is not supported; only the installation of remote files is supported as required.
+
+
 # Configuration
 
 Deployment configuration is stored in JSON file configuration.json:
 - "hosts" section lists the hosts where to install files
 - "packages" section lists the packages to install or remove. JSON "deploy_mode" element controls mode: it can take a value "install" or "remove".
-- "files" section lists the files to deploy with their attributes . Only web root /var/www/html/ is allowed for deployment
+- "files" section lists the files to deploy with their attributes . Only remote web root /var/www/html/ is allowed for file installation. Files for remote installation are taken from local files2deploy folder.
 - "restarts" section lists the OS services to restart  
 
-Files for remote installation are taken from files2deploy folder.
-
-# Notes
-- For security reasons it is a good practice not to use root access, some other user should be used and sudo privilege granted. But for the sake of  --- simplicity root user is used.  
-- For security reasons it is a good practice not to store password in the code, so program will ask for password.  
-- For security reasons files are allowed to be installed only to ONE remote folder, which is web root, ALLOWED_DIR=/var/www/html/  
-- For security reasons root password is redacted from log, password replaced with the keyword <censored> :)
-- For simplicity creation of remote directories is not supported. Only remote files installation is supported as required.  
 
 # How to invoke program
   ```python3 remote.py```

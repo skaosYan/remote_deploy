@@ -3,15 +3,20 @@ Simple tool to deploy remote files and packages
 
 # Requirements
 - Python3 is required.
-- sshpass package is required to pass SSH password non-interactively. Install sshpass on MacOS:```brew install sshpass```
+- sshpass package is required to pass SSH password non-interactively. Install sshpass on MacOS:  
+```brew install sshpass```
 
 # Architecture
 
 All the code is placed in a single Python file remote.py, located on a client. Remote hosts do not need any bootstrap.  
 
+Based on the local configuration.json, Python script remote.py through SSH connects to remote hosts. Script processes configured hosts one by one, installs/remove packages, installs files and restarts services by running remote SSH commands.
+
 Two Python classes handle the workflow:
-- RemoteExecutor, class starts SSH session and executes remote commands over SSH
-- Control, class that gets JSON configuration, password and invokes RemoteExecutor instances
+- RemoteExecutor. This class opens SSH session and executes remote commands over SSH
+- Control. This class reads JSON configuration, password and creates RemoteExecutor instances, passing configuration info to them
+
+Script manages deployments in a single thread. For a larger number of hosts class Control can be easily extended into multi-threaded architecture to manage a massive number of hosts in parallel, asynchronously.
 
 # Configuration
 

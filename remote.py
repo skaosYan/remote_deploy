@@ -5,14 +5,11 @@ import os
 import subprocess
 from typing import Tuple
 
-
-# TODO: user password can't be stored in a plain form,
-# needs to be moved to a secret
 USER_NAME           = "root"
 CONFIG_FILE         = "configuration.json"
 ALLOWED_DIR         = "/var/www/html/"
-ROOT_DIR            = os.path.dirname(os.path.abspath(__file__))
-FILES_REPO_DIR      = ROOT_DIR+"/files2deploy/"
+APP_ROOT_DIR        = os.path.dirname(os.path.abspath(__file__))
+FILES_REPO_DIR      = APP_ROOT_DIR+"/files2deploy/"
 
 REMOTE_SSH          = "sshpass -p {} ssh " + USER_NAME + "@{} "
 RESTART_SERVICE     = "service {} restart"
@@ -27,17 +24,20 @@ INSTALL_FILE_MODE   = "chmod {} " + ALLOWED_DIR + "{}"
 logging.basicConfig(
                     level=logging.INFO,
                     format='%(asctime)s:  %(funcName)20s() : %(levelname)-8s : %(message)s',
-                    handlers=[logging.FileHandler("remote.log"),logging.StreamHandler()]
+                    handlers=[
+                            logging.FileHandler("remote.log"),
+                            logging.StreamHandler()
+                            ]
                    )
 
-
+# class to manage 1 host. Class installs files, installes/removed packages and restart remote services
 class RemoteExecutor:
     def __init__(self, hostname, username, password):
         self.hostname = hostname
         self.username = username
         self.password = password
-        self.json_config = None
 
+    # function removes password before message is printed to log
     def redact_password(self, cmd):
         return cmd.replace(self.password, '<censored>')
 
@@ -55,12 +55,12 @@ class RemoteExecutor:
 
     # function constructs a remote command: SSH + OS command
     def run_ssh_cmd(self, cmd) -> Tuple[int, str]:
-        cmd = REMOTE_SSH.format(self.password,self.hostname) + "'" + cmd + "'"
+        cmd = REMOTE_SSH.format(self.password, self.hostname) + "'" + cmd + "'"
         res = self.run_cmd(cmd)
         if res[0] == 0:
             logging.info('Executed command %s successfully', self.redact_password(cmd))
         else:
-            logging.error('Failed to run command %s, error: %s' , self.redact_password(cmd), res[1])
+            logging.error('Failed to run command %s, error: %s', self.redact_password(cmd), res[1])
         return res
 
     # function restarts a remote Linux service
@@ -81,37 +81,38 @@ class RemoteExecutor:
         res = self.run_ssh_cmd(REMOVE_RPM.format(package_name))
         return res
 
-    # function installs a remote file and it's attributes
+    # function installs a remote file and sets file attributes
     def install_file(self, filename, owner, group, mode):
-        logging.info('Installing file: %s to %s', filename, ALLOWED_DIR)
+        logging.info('Installing file %s to %s', filename, ALLOWED_DIR)
 
         cmd = INSTALL_FILE.format(self.password, filename, self.hostname)
         res = self.run_cmd(cmd)
+
+        # skip file attributes if file installation failed
         if res[0] == 0:
-            logging.info('Installing file owner: %s, for %s', owner, filename)
+            logging.info('Installing owner %s, for file %s', owner, filename)
             res = self.run_ssh_cmd(INSTALL_FILE_OWNER.format(owner, filename))
 
-            logging.info('Installing group owner: %s for %s', group, filename)
+            logging.info('Installing group: %s for file %s', group, filename)
             res = self.run_ssh_cmd(INSTALL_FILE_GROUP.format(group, filename))
 
-            logging.info('Installing file mode: %s for file %s', mode, filename )
+            logging.info('Installing mode: %s for file %s', mode, filename)
             res = self.run_ssh_cmd(INSTALL_FILE_MODE.format(mode, filename))
         else:
             logging.error('Failed to install file, skipping file attributes: %s. Error %s', filename, res[1])
 
-
+# class to manage configuration, password and RemoteExecutor instances
 class Control:
     def __init__(self, config_file_name):
         self.config_file_name = config_file_name
         self.read_configuration()
 
-
     # function loads deployment configuraiton from json file
     def read_configuration(self):
         try:
             self.password = getpass.getpass(prompt=f"Enter password for user {USER_NAME} :")
-        except Exception as error:
-            logging.critical(f"Failed to get password for {USER_NAME} ")
+        except Exception as e:
+            logging.critical(f"Failed to get password for {USER_NAME}, %s ", repr(e))
             quit()
 
         logging.info('Reading deployment configuration')
@@ -122,12 +123,11 @@ class Control:
             logging.critical('Read configuration error %s', repr(e))
             quit()
 
-
     def install(self):
         logging.info('Applying changes to remote hosts')
 
         for _host in self.json_config['hosts']:
-            logging.info('Starting with host %s', _host)
+            logging.info('Starting changes at host %s', _host['hostname'])
             executor = RemoteExecutor(hostname=_host['hostname'], username=USER_NAME, password=self.password)
 
             # process all configured packages
@@ -147,7 +147,7 @@ class Control:
             for _service in self.json_config['restarts']:
                 executor.restart_service(_service['service_name'])
 
-            logging.info('Completed with host %s', _host)
+            logging.info('Completed host %s', _host['hostname'])
 
         logging.info('Completed applying changes to all configured hosts')
 

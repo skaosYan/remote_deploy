@@ -25,10 +25,10 @@ INSTALL_FILE_GROUP  = "chgrp {} " + ALLOWED_DIR + "{}"
 INSTALL_FILE_MODE   = "chmod {} " + ALLOWED_DIR + "{}"
 
 logging.basicConfig(
-                    filename='remote.log',
-                    filemode='w',
                     level=logging.INFO,
-                    format='%(asctime)s:  %(funcName)20s() : %(levelname)-8s : %(message)s')
+                    format='%(asctime)s:  %(funcName)20s() : %(levelname)-8s : %(message)s',
+                    handlers=[logging.FileHandler("remote.log"),logging.StreamHandler()]
+                   )
 
 
 class RemoteExecutor:
@@ -108,8 +108,13 @@ class Control:
 
     # function loads deployment configuraiton from json file
     def read_configuration(self):
-        logging.info('Reading deployment configuration')
+        try:
+            self.password = getpass.getpass(prompt=f"Enter password for user {USER_NAME} :")
+        except Exception as error:
+            logging.critical(f"Failed to get password for {USER_NAME} ")
+            quit()
 
+        logging.info('Reading deployment configuration')
         try:
             with open(self.config_file_name, 'r') as f:
                 self.json_config = json.load(f)
@@ -117,16 +122,12 @@ class Control:
             logging.critical('Read configuration error %s', repr(e))
             quit()
 
-        try:
-            self.password = getpass.getpass(prompt=f"Enter password for user {USER_NAME} :")
-        except Exception as error:
-            logging.critical(f"Failed to get password for {USER_NAME} ")
-            quit()
 
     def install(self):
         logging.info('Applying changes to remote hosts')
 
         for _host in self.json_config['hosts']:
+            logging.info('Starting with host %s', _host)
             executor = RemoteExecutor(hostname=_host['hostname'], username=USER_NAME, password=self.password)
 
             # process all configured packages
@@ -145,6 +146,10 @@ class Control:
             # as a very last step restart required services
             for _service in self.json_config['restarts']:
                 executor.restart_service(_service['service_name'])
+
+            logging.info('Completed with host %s', _host)
+
+        logging.info('Completed applying changes to all configured hosts')
 
 
 if __name__ == "__main__":

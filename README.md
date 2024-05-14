@@ -1,4 +1,4 @@
-# remote_deploy
+README.md# remote_deploy
 Simple remote deployment tool  
 
 #Architecture
@@ -15,7 +15,7 @@ Simple remote deployment tool
 Deployment configuration is stored in JSON file configuration.json:
 - "hosts" section lists the hosts where to install files
 - "packages" section lists the packages to install or to remove
-- "files" section lists the file for web server to deploy. Only /var/www/html/ is allowed to deploy to
+- "files" section lists the files and attributes to deploy. Only web root /var/www/html/ is allowed for deployment
 - "restarts" section lists the services to restart
 
 

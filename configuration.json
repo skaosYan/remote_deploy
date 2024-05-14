@@ -1,7 +1,8 @@
 {
   "hosts": [
     {
-      "hostname": "54.174.79.219"
+      "hostname": "54.174.79.219",
+      "hostname": "3.89.242.163"
     }
   ],
   "packages": [
